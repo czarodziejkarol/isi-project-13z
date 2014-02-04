@@ -1,14 +1,21 @@
 package com.carlncarl.isi.project;
 
+import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -33,9 +40,10 @@ public class UI extends JFrame {
 	private JScrollPane scrollPane;
 	private JCheckBoxMenuItem chckbxmntmDebug;
 	private JMenuItem mntmShowKnowledge;
+	private JMenuItem mntmWczytajWiedz;
 	private boolean debug = false;
 	private Executor executor;
-	
+
 	public UI() {
 		executor = new Executor(this);
 		previousInputs = new LinkedList<String>();
@@ -62,8 +70,13 @@ public class UI extends JFrame {
 				showKnowledge();
 			}
 		});
-		
-		JMenuItem mntmWczytajWiedz = new JMenuItem("Wczytaj wiedz\u0119");
+
+		mntmWczytajWiedz = new JMenuItem("Wczytaj wiedz\u0119");
+		mntmWczytajWiedz.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				readFile();
+			}
+		});
 		mnOptions.add(mntmWczytajWiedz);
 		mnOptions.add(mntmShowKnowledge);
 
@@ -118,10 +131,36 @@ public class UI extends JFrame {
 		setTitle("Renaissance Painters");
 	}
 
+	protected void readFile() {
+		final JFileChooser fc = new JFileChooser();
+		// In response to a button click:
+		int returnVal = fc.showOpenDialog(this);
+		if (returnVal == JFileChooser.APPROVE_OPTION) {
+			File file = fc.getSelectedFile();
+
+			try {
+				BufferedReader br = new BufferedReader(new FileReader(file));
+				String line = null;
+
+				while ((line = br.readLine()) != null) {
+					String[] row = line.split(",");
+					if (row.length > 2) {
+						executor.addFact(row);
+					}
+				}
+				br.close();
+
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+
 	protected void showKnowledge() {
 
 		String knowledge = "";
-		for (Fact fact : executor.getFacts() ) {
+		for (Fact fact : executor.getFacts()) {
 			knowledge += "\r\n\t" + fact.toString();
 		}
 
@@ -154,7 +193,7 @@ public class UI extends JFrame {
 
 	// Methods of role USERINTERFACE
 	protected void setDebugMode() {
-		this.debug  = chckbxmntmDebug.isSelected();
+		this.debug = chckbxmntmDebug.isSelected();
 	}
 
 	protected void receiveQuery() {

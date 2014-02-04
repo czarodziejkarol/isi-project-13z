@@ -18,7 +18,7 @@ public class Executor {
 	private static final String RESULT_UNDERSTAND = "Rozumiem.";
 	private static final String INCORRECT_INPUT = "Wprowadzony tekst nie mo¿e byæ pusty.";
 	private static final String RESULT_ALREADY_KNOWN = "Wprowadzana wiedza jest ju¿ posiadana.";
-	public static final String ANSWER_DO_NOT_KNOW = "Nie wiadomo";
+	public static final String ANSWER_DO_NOT_KNOW = "Nie wiem";
 	public static final String ANSWER_YES = "Tak";
 
 	private UI frame;
@@ -58,13 +58,12 @@ public class Executor {
 				}
 				String result = "";
 				Action action = rules.get(patternString);
+				action.setGroups(groups);
 
 				switch (action.getMethod()) {
 				case Action.ALL_PATHS:
 					action.setQuestion(inputUser);
-					LinkedList<String> matches = generateComplexAnswer(action,
-							groups);
-					result = prepareAnswer(action, groups, matches);
+					result = generateComplexAnswer(action, groups);
 					break;
 				case Action.ONE_PATH:
 					action.setQuestion(inputUser);
@@ -94,15 +93,16 @@ public class Executor {
 		String first = groups[Integer.parseInt(phraseIn[0])];
 		String second = groups[Integer.parseInt(phraseIn[2])];
 
-		groups[Integer.parseInt(phraseIn[0])] = getStems(groups[Integer
-				.parseInt(phraseIn[0])]);
-		groups[Integer.parseInt(phraseIn[2])] = getStems(groups[Integer
-				.parseInt(phraseIn[2])]);
+		// groups[Integer.parseInt(phraseIn[0])] = getStems(groups[Integer
+		// .parseInt(phraseIn[0])]);
+		// groups[Integer.parseInt(phraseIn[2])] = getStems(groups[Integer
+		// .parseInt(phraseIn[2])]);
 
 		initialWords.put(groups[Integer.parseInt(phraseIn[0])], first);
 		initialWords.put(groups[Integer.parseInt(phraseIn[2])], second);
 
 		String result = null;
+		String type = getType(groups[1]);
 
 		for (String phrase : splittedPhrases) {
 			spl = phrase.toCharArray();
@@ -110,10 +110,24 @@ public class Executor {
 			for (int i = 0; i < spl.length; i++) {
 				phraseP[i] = Character.toString(spl[i]);
 			}
+			String typeA = null;
+			String typeB = null;
+			String rel = String.valueOf(phraseP[1]);
 
-			Fact fact = new Fact(groups[Integer.parseInt(phraseP[0])],
-					String.valueOf(phraseP[1]),
-					groups[Integer.parseInt(phraseP[2])]);
+			char relC = rel.charAt(0);
+			if (relC >= 'a' && relC <= 'z') {
+				typeA = type;
+			} else if (relC >= 'A' && relC <= 'Z') {
+				typeB = type;
+			}
+
+			ObjectInfo a = new ObjectInfo(groups[Integer.parseInt(phraseP[0])],
+					typeA);
+			ObjectInfo b = new ObjectInfo(groups[Integer.parseInt(phraseP[2])],
+					typeB);
+
+			Fact fact = new Fact(a, rel, b);
+
 			if (!facts.contains(fact)) {
 				facts.add(fact);
 				debug("Add Fact: " + fact.toString());
@@ -126,6 +140,40 @@ public class Executor {
 		return result;
 	}
 
+	private String getType(String group) {
+		String type = ObjectInfo.MALE;
+		if (group.contains("³a ")) {
+			type = ObjectInfo.FEMALE;
+		}
+		return type;
+	}
+
+	public void addFact(String[] row) {
+		ObjectInfo a;
+		ObjectInfo b = new ObjectInfo(row[2], null);
+		String rel = row[1];
+
+		String[] spl = row[0].split("|");
+		if (spl.length > 1) {
+			a = new ObjectInfo(spl[0], spl[1]);
+		} else {
+			a = new ObjectInfo(row[0], null);
+		}
+
+		Fact fact = new Fact(a, rel, b);
+
+		if (!facts.contains(fact)) {
+			facts.add(fact);
+		}
+
+		// dodanie odwrtornej zale¿noœci
+		fact = new Fact(b, rel.toUpperCase(), a);
+		if (!facts.contains(fact)) {
+			facts.add(fact);
+		}
+
+	}
+
 	// Methods of role USERINTERFACE
 	public void setDebugMode(boolean selected) {
 		debugMode = selected;
@@ -135,36 +183,32 @@ public class Executor {
 		return queryInterpretation(userInput);
 	}
 
+	public String generateComplexAnswer(Action action, String[] groups) {
+		ObjectInfo inputObject = null;
+		ObjectInfo start;
 
+		start = new ObjectInfo(groups[groups.length - 1], null);
 
-	public LinkedList<String> generateComplexAnswer(Action action,
-			String[] groups) {
-
-		String start;
-
-		if (action.getArg().equals("p") || action.getArg().equals("r")) {
-			groups[1] = getStems(groups[1]);
-			start = groups[1];
-		} else {
-			groups[0] = getStems(groups[0]);
-			start = groups[0];
-		}
-
-		String first = start;
+		ObjectInfo first = start;
 
 		LinkedList<Fact> used = new LinkedList<Fact>();
-		LinkedList<String> matches = new LinkedList<String>();
-		LinkedList<String> q = new LinkedList<String>();
+		LinkedList<ObjectInfo> matches = new LinkedList<ObjectInfo>();
+		LinkedList<ObjectInfo> q = new LinkedList<ObjectInfo>();
+		
 		while (true) {
+			int i = 0;
 			for (Fact fact : facts) {
 				if (used.contains(fact) || !fact.getA().equals(start)
-						|| !fact.getRel().equals(action.getArg())) {
+						|| !fact.getRel().equals(action.getArg().charAt(i) + "")) {
 					continue;
 				}
 
 				if (!fact.getB().equals(first)
-						&& !matches.contains(initialWords.get(fact.getB()))) {
-					matches.add(initialWords.get(fact.getB()));
+						&& !matches.contains(fact.getB())) {
+					if (inputObject == null) {
+						inputObject = fact.getA();
+					}
+					matches.add(fact.getB());
 					used.add(fact);
 					q.add(fact.getB());
 				}
@@ -174,9 +218,121 @@ public class Executor {
 				break;
 			}
 			start = q.removeLast();
+			
+			
+		}
+		if (inputObject == null) {
+			inputObject = start;
 		}
 
-		return matches;
+		return prepareAnswer(action, inputObject, matches);
+	}
+
+	public String prepareAnswer(Action action, ObjectInfo start,
+			LinkedList<ObjectInfo> matches) {
+		String linkWord = null;
+
+		String userForm = start.getValue();
+
+		if (action.getArg().equals("p") || action.getArg().equals("P")) {
+			linkWord = " posiada: ";
+		} else if (action.getArg().equals("r")) {
+			linkWord = " jest równowa¿ny ";
+		} else if (action.getArg().equals("N")) {
+			linkWord = " jest ";
+		} else if (action.getArg().equals("w")) {
+
+			if (start.getType() != null
+					&& start.getType().equals(ObjectInfo.FEMALE)) {
+				linkWord = " zagra³a w ";
+			} else {
+				linkWord = " zagra³ w ";
+			}
+
+		}
+
+		String answer = "";
+		if (matches.size() == 0) {
+
+			String questionAsAnswer = action.getQuestion().substring(0, 2)
+					.toLowerCase()
+					+ action.getQuestion().substring(1);
+			answer = ANSWER_DO_NOT_KNOW + " " + questionAsAnswer;
+
+		} else {
+			
+			String[] aGroups = action.getGroups();
+			if(aGroups.length == 2){
+				
+				answer = aGroups[aGroups.length - 1];
+				answer += " " + aGroups[aGroups.length - 2];
+				
+			} else if (action.getArg().equals("w") || action.getArg().equals("r")) {
+				answer = aGroups[aGroups.length - 1];
+				answer += " " + aGroups[aGroups.length - 2];
+
+				String startQuestion = aGroups[aGroups.length - 3];
+
+				String[] spl = startQuestion.split(" ");
+				ArrayList<String> toAns = new ArrayList<String>();
+
+				for (int i = 0; i < spl.length; i++) {
+					String word = spl[i];
+					String stem = getStems(word);
+					if (stem.equals("jaki")) {
+						continue;
+					}
+					toAns.add(word);
+				}
+				for (String word : toAns) {
+					answer += " " + word;
+				}
+			} else if (action.getArg().equals("t") || action.getArg().equals("R")
+					|| action.getArg().equals("W")) {
+				
+				answer = aGroups[aGroups.length - 2];
+				answer += " " + aGroups[aGroups.length - 1];
+				answer += " " + aGroups[aGroups.length - 3];
+				
+				
+				if(aGroups.length > 3){
+					String startQuestion = aGroups[aGroups.length - 4];
+
+					String[] spl = startQuestion.split(" ");
+					ArrayList<String> toAns = new ArrayList<String>();
+
+					for (int i = 0; i < spl.length; i++) {
+						String word = spl[i];
+						String stem = getStems(word);
+						if (stem.equals("jaki")) {
+							continue;
+						}
+						toAns.add(word);
+					}
+					for (String word : toAns) {
+						answer += " " + word;
+					}
+				}
+			}
+
+
+			if (matches.size() == 1) {
+				answer += " " + matches.getFirst();
+			} else {
+//				answer = userForm
+//						+ ((action.getArg().equals("P") ? " posiadaj¹ "
+//								: linkWord));
+				String ma = " ";
+				for (ObjectInfo match : matches) {
+					if (ma.length() > 1) {
+						ma += ", ";
+					}
+					ma += match;
+				}
+				answer += ma;
+			}
+		}
+		return answer;
 	}
 
 	public String generateSimpleAnswer(Action action, String[] groups) {
@@ -189,10 +345,12 @@ public class Executor {
 		ArrayList<String> ans = new ArrayList<String>();
 		for (String rule : splRules) {
 			String pattern = rule.substring(1, rule.length() - 2);
-			String start = groups[Integer.parseInt(rule.substring(0, 1))];
-			String stop = groups[Integer.parseInt(ruleP.substring(ruleP
-					.length() - 1))];
+			ObjectInfo start = new ObjectInfo(groups[Integer.parseInt(rule
+					.substring(0, 1))], null);
+			ObjectInfo stop = new ObjectInfo(groups[Integer.parseInt(ruleP
+					.substring(ruleP.length() - 1))], null);
 			ans = new ArrayList<String>();
+
 			path(pattern, start, stop, new LinkedList<Fact>(), ans, "", " ");
 			if (ans.size() > 0)
 				break;
@@ -208,7 +366,7 @@ public class Executor {
 	}
 
 	public String prepareAnswer(Action action, String[] groups,
-			LinkedList<String> answerList) {
+			LinkedList<ObjectInfo> matches) {
 		String linkWord = null;
 
 		String userForm;
@@ -225,17 +383,19 @@ public class Executor {
 			linkWord = " jest równowa¿ny ";
 		} else if (action.getArg().equals("N")) {
 			linkWord = " jest: ";
+		} else if (action.getArg().equals("w")) {
+			linkWord = " zagra³: ";
 		}
 		String answer;
-		if (answerList.size() == 0) {
+		if (matches.size() == 0) {
 			answer = ANSWER_DO_NOT_KNOW;
-		} else if (answerList.size() == 1) {
-			answer = userForm + linkWord + answerList.getFirst();
+		} else if (matches.size() == 1) {
+			answer = userForm + linkWord + matches.getFirst();
 		} else {
 			answer = userForm
 					+ ((action.getArg().equals("P") ? " posiadaj¹ " : linkWord));
 			String ma = "";
-			for (String match : answerList) {
+			for (ObjectInfo match : matches) {
 				if (ma.length() > 0) {
 					ma += ", ";
 				}
@@ -246,7 +406,7 @@ public class Executor {
 		return answer;
 	}
 
-	private void path(String pattern, String start, String end,
+	private void path(String pattern, ObjectInfo start, ObjectInfo end,
 			LinkedList<Fact> before, ArrayList<String> ans, String sofar,
 			String indent) {
 		debug(indent + " (" + start + ") -> (" + end + ")");
@@ -298,55 +458,88 @@ public class Executor {
 	}
 
 	private void addRules() {
+		/*
+		 * rules.put("co (posiada|ma) (.*)", new Action(Action.ALL_PATHS, "p"));
+		 * 
+		 * rules.put("co (odpowiada|jest równowa¿n[y|a|e]) (.*)", new Action(
+		 * Action.ALL_PATHS, "r"));
+		 * 
+		 * rules.put("co jest (.*)", new Action(Action.ALL_PATHS, "N"));
+		 * 
+		 * rules.put("jakie obiekty posiadaj¹ (.*)", new
+		 * Action(Action.ALL_PATHS, "P"));
+		 * 
+		 * rules.put("kto posiada (.*)", new Action(Action.ALL_PATHS, "P"));
+		 * 
+		 * rules.put("czy ka¿d[y|a|e] (.*) (to|jest) (.*)", new Action(
+		 * Action.ONE_PATH, "0r*j*2"));
+		 * 
+		 * rules.put("czy (.*) (to|jest) (.*)", new Action(Action.ONE_PATH,
+		 * "0r*nj*2|0r*j*2"));
+		 * 
+		 * rules.put("czy ka¿d[y|a|e] (.*) (posiada|ma) (.*)", new Action(
+		 * Action.ONE_PATH, "0r*p*j*2"));
+		 * 
+		 * rules.put("czy któr[y|a|e]kolwiek (.*) (posiada|ma) (.*)", new
+		 * Action( Action.ONE_PATH, "0J*Nr*pj*2"));
+		 * 
+		 * rules.put("czy (.*) (posiada|ma) (.*)", new Action(Action.ONE_PATH,
+		 * "0r*nj*pj*2|0J*Nr*pj*2|0r*p*j*2"));
+		 * 
+		 * rules.put("(ka¿d[y|a|e]|dowoln[y|a|e]) (.*) (to|jest podzbiorem) (.*)"
+		 * , new Action(Action.ADD_FACT, "1j3|3J1"));
+		 * 
+		 * rules.put("(ka¿d[y|a|e]|dowoln[y|a|e]) (.*) (jest) (.*)", new Action(
+		 * Action.ADD_FACT, "1j3|3J1"));
+		 * 
+		 * rules.put("(.*) (odpowiada|jest równowa¿n[y|a|e]) (.*)", new Action(
+		 * Action.ADD_FACT, "0r2|2r0"));
+		 * 
+		 * rules.put("(.*) (to|jest|nale¿y do|to cz³onek|jest cz³onkiem) (.*)",
+		 * new Action(Action.ADD_FACT, "0n2|2N0"));
+		 * 
+		 * rules.put(
+		 * "(ka¿d|dowoln[y|a|e]) (.*) (posiada|ma) (jak[i|¹]œ|dowoln[y|¹|e]) (.*)"
+		 * , new Action(Action.ADD_FACT, "1p4|4P1"));
+		 * 
+		 * rules.put("(ka¿d[y|a|e]|dowoln[y|a|e]) (.*) (posiada|ma) (.*)", new
+		 * Action(Action.ADD_FACT, "1p3|3P1"));
+		 * 
+		 * rules.put("(.*) (posiada|ma) (.*)", new Action(Action.ADD_FACT,
+		 * "0p2|2P0"));
+		 */
 
-		rules.put("co (posiada|ma) (.*)", new Action(Action.ALL_PATHS, "p"));
+		rules.put("(.*) (wyst¹pi[³|³a] w filmie|zagra[³|³a] w filmie) (.*)",
+				new Action(Action.ADD_FACT, "0w2|2W0"));
 
-		rules.put("co (odpowiada|jest równowa¿n[y|a|e]) (.*)", new Action(
-				Action.ALL_PATHS, "r"));
+		rules.put("w filmie (.*) (wyst¹pi[³|³a]|zagra[³|³a]) (.*)", new Action(
+				Action.ADD_FACT, "0W2|2w0"));
 
-		rules.put("co jest (.*)", new Action(Action.ALL_PATHS, "N"));
+		rules.put("film (.*) (to) (.*)", new Action(Action.ADD_FACT, "0t2|2T0"));
 
-		rules.put("jakie obiekty posiadaj¹ (.*)", new Action(Action.ALL_PATHS,
-				"P"));
+		rules.put("(re¿yserem filmu) (.*) (jest) (.*)", new Action(
+				Action.ADD_FACT, "3r1|1R3"));
 
-		rules.put("kto posiada (.*)", new Action(Action.ALL_PATHS, "P"));
+		rules.put("kto (wyst¹pi³) (w filmie) (.*)", new Action(
+				Action.ALL_PATHS, "W"));
 
-		rules.put("czy ka¿d[y|a|e] (.*) (to|jest) (.*)", new Action(
-				Action.ONE_PATH, "0r*j*2"));
+		rules.put("jakie filmy (s¹) (.*)", new Action(Action.ALL_PATHS, "T"));
 
-		rules.put("czy (.*) (to|jest) (.*)", new Action(Action.ONE_PATH,
-				"0r*nj*2|0r*j*2"));
+		rules.put("(w jakich filmach) (zagra[³|³a]|wyst¹pi[³|³a]) (.*)",
+				new Action(Action.ALL_PATHS, "w"));
 
-		rules.put("czy ka¿d[y|a|e] (.*) (posiada|ma) (.*)", new Action(
-				Action.ONE_PATH, "0r*p*j*2"));
+		rules.put("kto (jest) (re¿yserem filmu) (.*)", new Action(
+				Action.ALL_PATHS, "R"));
 
-		rules.put("czy któr[y|a|e]kolwiek (.*) (posiada|ma) (.*)", new Action(
-				Action.ONE_PATH, "0J*Nr*pj*2"));
+		rules.put("(jakie filmy) (wyre¿yserowa[³|³a]|nakrêci[³|³a]) (.*)",
+				new Action(Action.ALL_PATHS, "r"));
 
-		rules.put("czy (.*) (posiada|ma) (.*)", new Action(Action.ONE_PATH,
-				"0r*nj*pj*2|0J*Nr*pj*2|0r*p*j*2"));
+		rules.put("(jakiego gatunku) (jest) (film) (.*)", new Action(
+				Action.ALL_PATHS, "t"));
+		
+		rules.put("(w jakich gatunkach filmowych) (zagra[³|³a]|wyst¹pi[³|³a]) (.*)", new Action(
+				Action.ALL_PATHS, "wt"));
 
-		rules.put("(ka¿d[y|a|e]|dowoln[y|a|e]) (.*) (to|jest podzbiorem) (.*)",
-				new Action(Action.ADD_FACT, "1j3|3J1"));
-
-		rules.put("(ka¿d[y|a|e]|dowoln[y|a|e]) (.*) (jest) (.*)", new Action(
-				Action.ADD_FACT, "1j3|3J1"));
-
-		rules.put("(.*) (odpowiada|jest równowa¿n[y|a|e]) (.*)", new Action(
-				Action.ADD_FACT, "0r2|2r0"));
-
-		rules.put("(.*) (to|jest|nale¿y do|to cz³onek|jest cz³onkiem) (.*)",
-				new Action(Action.ADD_FACT, "0n2|2N0"));
-
-		rules.put(
-				"(ka¿d|dowoln[y|a|e]) (.*) (posiada|ma) (jak[i|¹]œ|dowoln[y|¹|e]) (.*)",
-				new Action(Action.ADD_FACT, "1p4|4P1"));
-
-		rules.put("(ka¿d[y|a|e]|dowoln[y|a|e]) (.*) (posiada|ma) (.*)",
-				new Action(Action.ADD_FACT, "1p3|3P1"));
-
-		rules.put("(.*) (posiada|ma) (.*)", new Action(Action.ADD_FACT,
-				"0p2|2P0"));
 
 	}
 
