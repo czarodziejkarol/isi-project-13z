@@ -5,17 +5,17 @@ import java.io.Serializable;
 public class Fact implements Serializable{
 
 	private static final long serialVersionUID = 5971025828782619877L;
-	private String a;
+	private ObjectInfo a;
 	private String rel;
-	private String b;
+	private ObjectInfo b;
 
-	public Fact(String a, String rel, String b) {
+	public Fact(ObjectInfo a, String rel, ObjectInfo b) {
 		this.a = a;
 		this.rel = rel;
 		this.b = b;
 	}
 
-	public String getA() {
+	public ObjectInfo getA() {
 		return a;
 	}
 
@@ -23,7 +23,7 @@ public class Fact implements Serializable{
 		return rel;
 	}
 
-	public String getB() {
+	public ObjectInfo getB() {
 		return b;
 	}
 
