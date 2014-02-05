@@ -63,9 +63,9 @@ public class Executor {
 				switch (action.getMethod()) {
 				case Action.ALL_PATHS:
 					action.setQuestion(inputUser);
-					//result = generateComplexAnswer(action, groups);
+					// result = generateComplexAnswer(action, groups);
 					result = getObjects(action, groups);
-					
+
 					break;
 				case Action.ONE_PATH:
 					action.setQuestion(inputUser);
@@ -196,12 +196,14 @@ public class Executor {
 		LinkedList<Fact> used = new LinkedList<Fact>();
 		LinkedList<ObjectInfo> matches = new LinkedList<ObjectInfo>();
 		LinkedList<ObjectInfo> q = new LinkedList<ObjectInfo>();
-		
+
 		while (true) {
 			int i = 0;
 			for (Fact fact : facts) {
-				if (used.contains(fact) || !fact.getA().equals(start)
-						|| !fact.getRel().equals(action.getArg().charAt(i) + "")) {
+				if (used.contains(fact)
+						|| !fact.getA().equals(start)
+						|| !fact.getRel()
+								.equals(action.getArg().charAt(i) + "")) {
 					continue;
 				}
 
@@ -220,8 +222,7 @@ public class Executor {
 				break;
 			}
 			start = q.removeLast();
-			
-			
+
 		}
 		if (inputObject == null) {
 			inputObject = start;
@@ -229,44 +230,43 @@ public class Executor {
 
 		return prepareAnswer(action, inputObject, matches);
 	}
-	
-	public String getObjects(Action action, String[] groups){
-		
+
+	public String getObjects(Action action, String[] groups) {
+
 		LinkedList<ObjectInfo> matches = new LinkedList<ObjectInfo>();
 		LinkedList<ObjectInfo> nextStep = new LinkedList<>();
-		
+
 		ObjectInfo start = new ObjectInfo(groups[groups.length - 1], null);
 		nextStep.add(start);
 		ObjectInfo inputObject = null;
-		
+
 		for (int i = 0; i < action.getArg().length(); i++) {
 			String rel = action.getArg().charAt(i) + "";
 			LinkedList<ObjectInfo> values = new LinkedList<>();
 			for (ObjectInfo objectInfo : nextStep) {
-				inputObject = getObjectsMatches(rel, objectInfo, inputObject, values);
+				inputObject = getObjectsMatches(rel, objectInfo, inputObject,
+						values);
 			}
-			
-			if(i+1 == action.getArg().length()){
+
+			if (i + 1 == action.getArg().length()) {
 				matches.addAll(values);
 			} else {
 				nextStep.addAll(values);
 			}
 		}
-		
-		
-		
-		
+
 		return prepareAnswer(action, inputObject, matches);
-		
+
 	}
-	
-	public ObjectInfo getObjectsMatches(String rel,ObjectInfo start, ObjectInfo inputObject, LinkedList<ObjectInfo> matches) {
+
+	public ObjectInfo getObjectsMatches(String rel, ObjectInfo start,
+			ObjectInfo inputObject, LinkedList<ObjectInfo> matches) {
 
 		ObjectInfo first = start;
 
 		LinkedList<Fact> used = new LinkedList<Fact>();
 		LinkedList<ObjectInfo> q = new LinkedList<ObjectInfo>();
-		
+
 		while (true) {
 			int i = 0;
 			for (Fact fact : facts) {
@@ -290,8 +290,7 @@ public class Executor {
 				break;
 			}
 			start = q.removeLast();
-			
-			
+
 		}
 		if (inputObject == null) {
 			inputObject = start;
@@ -299,7 +298,6 @@ public class Executor {
 
 		return inputObject;
 	}
-	
 
 	public String prepareAnswer(Action action, ObjectInfo start,
 			LinkedList<ObjectInfo> matches) {
@@ -330,17 +328,24 @@ public class Executor {
 			String questionAsAnswer = action.getQuestion().substring(0, 2)
 					.toLowerCase()
 					+ action.getQuestion().substring(1);
-			answer = ANSWER_DO_NOT_KNOW + " " + questionAsAnswer.replace("?", ".");
+			answer = ANSWER_DO_NOT_KNOW + " "
+					+ questionAsAnswer.replace("?", ".");
 
 		} else {
-			
+
 			String[] aGroups = action.getGroups();
-			if(aGroups.length == 2){
-				
+			if (aGroups.length == 2) {
+
 				answer = aGroups[aGroups.length - 1];
 				answer += " " + aGroups[aGroups.length - 2];
-				
-			} else if (action.getArg().equals("w") || action.getArg().equals("r")) {
+
+			} else if (action.getArg().equals("w")
+					|| action.getArg().equals("r")
+					|| action.getArg().equals("T")
+					|| action.getArg().equals("rt")
+					|| action.getArg().equals("wR")
+					|| action.getArg().equals("wt")
+					|| action.getArg().equals("rW")) {
 				answer = aGroups[aGroups.length - 1];
 				answer += " " + aGroups[aGroups.length - 2];
 
@@ -360,15 +365,17 @@ public class Executor {
 				for (String word : toAns) {
 					answer += " " + word;
 				}
-			} else if (action.getArg().equals("t") || action.getArg().equals("R")
-					|| action.getArg().equals("W")) {
-				
+			} else if (action.getArg().equals("t")
+					|| action.getArg().equals("R")
+					|| action.getArg().equals("W")
+					|| action.getArg().equals("TR")
+					|| action.getArg().equals("TW")) {
+
 				answer = aGroups[aGroups.length - 2];
 				answer += " " + aGroups[aGroups.length - 1];
 				answer += " " + aGroups[aGroups.length - 3];
-				
-				
-				if(aGroups.length > 3){
+
+				if (aGroups.length > 3) {
 					String startQuestion = aGroups[aGroups.length - 4];
 
 					String[] spl = startQuestion.split(" ");
@@ -388,13 +395,12 @@ public class Executor {
 				}
 			}
 
-
 			if (matches.size() == 1) {
 				answer += " " + matches.getFirst();
 			} else {
-//				answer = userForm
-//						+ ((action.getArg().equals("P") ? " posiadaj¹ "
-//								: linkWord));
+				// answer = userForm
+				// + ((action.getArg().equals("P") ? " posiadaj¹ "
+				// : linkWord));
 				String ma = " ";
 				for (ObjectInfo match : matches) {
 					if (ma.length() > 1) {
@@ -600,9 +606,6 @@ public class Executor {
 
 		rules.put("(w jakich filmach) (zagra[³|³a]|wyst¹pi[³|³a]) (.*)",
 				new Action(Action.ALL_PATHS, "w"));
-		
-		rules.put("(w jakich typach filmów) (zagra[³|³a]|wyst¹pi[³|³a]) (.*)",
-				new Action(Action.ALL_PATHS, "wt"));
 
 		rules.put("kto (jest) (re¿yserem filmu) (.*)", new Action(
 				Action.ALL_PATHS, "R"));
@@ -612,12 +615,27 @@ public class Executor {
 
 		rules.put("(jakiego gatunku) (jest) (film) (.*)", new Action(
 				Action.ALL_PATHS, "t"));
-		
-		rules.put("(w jakich gatunkach filmowych) (zagra[³|³a]|wyst¹pi[³|³a]) (.*)", new Action(
-				Action.ALL_PATHS, "wt"));
 
-		rules.put("czy (.*) (wspó³pracowa[³|³a]) (.*)", new Action(Action.ONE_PATH,
-				  "0wR2|2rW0|0rW2|2Rw0"));
+		rules.put("(w jakich gatunkach filmowych) (zagra[³|³a]|wyst¹pi[³|³a]) (.*)",
+				new Action(Action.ALL_PATHS, "wt"));
+
+		rules.put("czy (.*) (wspó³pracowa[³|³a]) (.*)", new Action(
+				Action.ONE_PATH, "0wR2|2rW0|0rW2|2Rw0"));
+
+		rules.put("(z jakimi re¿yserami) (wspó³pracowa[³|³a]) (.*)",
+				new Action(Action.ALL_PATHS, "wR"));
+
+		rules.put("(z jakimi aktorami) (wspó³pracowa³[³|³a]) (.*)", new Action(
+				Action.ALL_PATHS, "rW"));
+
+		rules.put("(jacy aktorzy) (wyst¹pili) (w filmach typu) (.*)",
+				new Action(Action.ALL_PATHS, "TW"));
+
+		rules.put("(jakie gatunki filmów) (wyre¿yserowa³[³|³a]) (.*)", new Action(
+				Action.ALL_PATHS, "rt"));
+
+		rules.put("(jacy re¿yserowie) (tworzyli) (filmy typu) (.*)", new Action(
+				Action.ALL_PATHS, "TR"));
 	}
 
 	private String getStems(String phrase) {
