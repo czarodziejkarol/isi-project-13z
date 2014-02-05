@@ -1,16 +1,14 @@
 package com.carlncarl.isi.project;
 
-import java.awt.Component;
+import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 
 import javax.swing.JButton;
@@ -43,6 +41,8 @@ public class UI extends JFrame {
 	private JMenuItem mntmWczytajWiedz;
 	private boolean debug = false;
 	private Executor executor;
+	private JPanel panel;
+	private JPanel panel_1;
 
 	public UI() {
 		executor = new Executor(this);
@@ -54,7 +54,7 @@ public class UI extends JFrame {
 		JMenuBar menuBar = new JMenuBar();
 		setJMenuBar(menuBar);
 
-		JMenu mnOptions = new JMenu("Options");
+		JMenu mnOptions = new JMenu("Opcje");
 		menuBar.add(mnOptions);
 
 		chckbxmntmDebug = new JCheckBoxMenuItem("Debug");
@@ -64,7 +64,7 @@ public class UI extends JFrame {
 			}
 		});
 
-		mntmShowKnowledge = new JMenuItem("Show knowledge");
+		mntmShowKnowledge = new JMenuItem("Poka\u017C wiedz\u0119");
 		mntmShowKnowledge.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				showKnowledge();
@@ -84,51 +84,55 @@ public class UI extends JFrame {
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
-		contentPane.setLayout(null);
-
-		JLabel lblInput = new JLabel("Input:");
-		lblInput.setBounds(10, 11, 77, 14);
-		contentPane.add(lblInput);
-
-		textFieldInput = new JTextField();
-		textFieldInput.setBounds(10, 36, 518, 20);
-		textFieldInput.addKeyListener(new KeyAdapter() {
-			@Override
-			public void keyPressed(KeyEvent e) {
-				if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-					receiveQuery();
-				} else if (e.getKeyCode() == KeyEvent.VK_UP) {
-					setPrevious(1);
-				} else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
-					setPrevious(-1);
-				}
-			}
-		});
-		contentPane.add(textFieldInput);
+		contentPane.setLayout(new BorderLayout(10, 10));
+		
+		panel = new JPanel();
+		contentPane.add(panel, BorderLayout.NORTH);
+				panel.setLayout(new BorderLayout(10, 10));
+		
+				JLabel lblInput = new JLabel("Zapytanie:");
+				panel.add(lblInput, BorderLayout.WEST);
+				
+						textFieldInput = new JTextField();
+						panel.add(textFieldInput);
+						textFieldInput.addKeyListener(new KeyAdapter() {
+							@Override
+							public void keyPressed(KeyEvent e) {
+								if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+									receiveQuery();
+								} else if (e.getKeyCode() == KeyEvent.VK_UP) {
+									setPrevious(1);
+								} else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+									setPrevious(-1);
+								}
+							}
+						});
 		textFieldInput.setColumns(10);
-
-		lblOutput = new JLabel("Output:");
-		lblOutput.setBounds(10, 67, 46, 14);
-		contentPane.add(lblOutput);
+		
+				JButton btnSend = new JButton("Pytaj!");
+				panel.add(btnSend, BorderLayout.EAST);
+				btnSend.addActionListener(new ActionListener() {
+					public void actionPerformed(ActionEvent e) {
+						receiveQuery();
+					}
+				});
+		
+		panel_1 = new JPanel();
+		contentPane.add(panel_1, BorderLayout.CENTER);
+				panel_1.setLayout(new BorderLayout(10, 10));
+		
+				lblOutput = new JLabel("Dziennik zdarze\u0144:");
+				panel_1.add(lblOutput, BorderLayout.NORTH);
 
 		scrollPane = new JScrollPane();
-		scrollPane.setBounds(10, 93, 603, 316);
-		contentPane.add(scrollPane);
+		panel_1.add(scrollPane);
 
 		txtOutput = new JTextArea();
+		txtOutput.setLineWrap(true);
 		scrollPane.setViewportView(txtOutput);
 		DefaultCaret caret = (DefaultCaret) txtOutput.getCaret();
 		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-
-		JButton btnSend = new JButton("Send");
-		btnSend.setBounds(538, 35, 75, 23);
-		btnSend.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				receiveQuery();
-			}
-		});
-		contentPane.add(btnSend);
-		setTitle("Renaissance Painters");
+		setTitle("O filmach");
 	}
 
 	protected void readFile() {

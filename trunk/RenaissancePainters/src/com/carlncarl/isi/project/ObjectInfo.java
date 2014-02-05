@@ -32,7 +32,7 @@ public class ObjectInfo {
 	@Override
 	public boolean equals(Object obj) {
 		ObjectInfo oB = (ObjectInfo) obj;
-		if (this.value.equals(oB.getValue())) {
+		if (this.value.equalsIgnoreCase(oB.getValue())) {
 			return true;
 		}
 		return super.equals(obj);
