@@ -44,7 +44,7 @@ public class Executor {
 			return INCORRECT_INPUT;
 		}
 		String inputTemp = inputUser;
-		inputTemp = inputTemp.trim().toLowerCase();
+		inputTemp = inputTemp.trim();
 		if (inputTemp.endsWith("?") || inputTemp.endsWith(".")) {
 			inputTemp = inputTemp.substring(0, inputTemp.length() - 1);
 		}
@@ -97,11 +97,6 @@ public class Executor {
 
 		String first = groups[Integer.parseInt(phraseIn[0])];
 		String second = groups[Integer.parseInt(phraseIn[2])];
-
-		// groups[Integer.parseInt(phraseIn[0])] = getStems(groups[Integer
-		// .parseInt(phraseIn[0])]);
-		// groups[Integer.parseInt(phraseIn[2])] = getStems(groups[Integer
-		// .parseInt(phraseIn[2])]);
 
 		initialWords.put(groups[Integer.parseInt(phraseIn[0])], first);
 		initialWords.put(groups[Integer.parseInt(phraseIn[2])], second);
@@ -158,7 +153,7 @@ public class Executor {
 		ObjectInfo b = new ObjectInfo(row[2], null);
 		String rel = row[1];
 
-		String[] spl = row[0].split("|");
+		String[] spl = row[0].split("#");
 		if (spl.length > 1) {
 			a = new ObjectInfo(spl[0], spl[1]);
 		} else {
