@@ -28,7 +28,10 @@ public class Executor {
 	private boolean debugMode;
 	ArrayList<String> myQuest = new ArrayList<>();
 
+	FreebaseManager freebase;
+
 	public Executor(UI ui) {
+		freebase = new FreebaseManager();
 		this.frame = ui;
 		facts = new ArrayList<Fact>();
 		rules = new LinkedHashMap<>();
@@ -235,10 +238,65 @@ public class Executor {
 
 		LinkedList<ObjectInfo> matches = new LinkedList<ObjectInfo>();
 		LinkedList<ObjectInfo> nextStep = new LinkedList<>();
+		ObjectInfo inputObject = null;
 
+		inputObject = lookInLocal(action, groups, matches, nextStep,
+				inputObject);
+		if (matches.size() == 0) {
+			ArrayList<String> names = new ArrayList<>();
+			names.add(groups[groups.length - 1]);
+
+			for (int i = 0; i < action.getArg().length(); i++) {
+				String rel = action.getArg().charAt(i) + "";
+				ArrayList<String> next = new ArrayList<>();
+				for (String name : names) {
+					ArrayList<String> list = freebase.searchInFreebase(name,
+							rel);
+					for (String second : list) {
+						addFact(name, rel, second);
+					}
+					next.addAll(list);
+				}
+				names.clear();
+				names.addAll(next);
+			}
+
+			inputObject = lookInLocal(action, groups, matches, nextStep,
+					inputObject);
+		}
+
+		return prepareAnswer(action, inputObject, matches);
+
+	}
+
+	private void addFact(String name, String rel, String second) {
+		ObjectInfo a = new ObjectInfo(name, null);
+		ObjectInfo b = new ObjectInfo(second, null);
+
+		Fact fact = new Fact(a, rel, b);
+
+		if (!facts.contains(fact)) {
+			facts.add(fact);
+		}
+
+		// dodanie odwrtornej zale¿noœci
+		Character ch = rel.charAt(0);
+		if (Character.isLowerCase(ch)) {
+			rel = rel.toUpperCase();
+		} else {
+			rel = rel.toLowerCase();
+		}
+		fact = new Fact(b, rel, a);
+		if (!facts.contains(fact)) {
+			facts.add(fact);
+		}
+	}
+
+	private ObjectInfo lookInLocal(Action action, String[] groups,
+			LinkedList<ObjectInfo> matches, LinkedList<ObjectInfo> nextStep,
+			ObjectInfo inputObject) {
 		ObjectInfo start = new ObjectInfo(groups[groups.length - 1], null);
 		nextStep.add(start);
-		ObjectInfo inputObject = null;
 
 		for (int i = 0; i < action.getArg().length(); i++) {
 			String rel = action.getArg().charAt(i) + "";
@@ -254,9 +312,7 @@ public class Executor {
 				nextStep.addAll(values);
 			}
 		}
-
-		return prepareAnswer(action, inputObject, matches);
-
+		return inputObject;
 	}
 
 	public ObjectInfo getObjectsMatches(String rel, ObjectInfo start,
